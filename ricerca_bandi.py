@@ -165,7 +165,11 @@ def avvia_esplorazione_in_background():
     SITI_BERSAGLIO = [
         "https://calabriaeuropa.regione.calabria.it/bando/",
         "https://www.puntoimpresadigitale.camcom.it/bandi/",
-        "https://www.rc.camcom.gov.it/bandi-e-concorsi/bandi-di-gara"
+        "https://www.rc.camcom.gov.it/bandi-e-concorsi/bandi-di-gara",
+        "https://bandifincalabra.it",
+        "https://www.fincalabra.it/web/",
+        "https://bandi.contributiregione.it/regione/calabria",
+        "https://www.reggiocal.it/Notizie/Details/7541"
     ]
 
     try:
