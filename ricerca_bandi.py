@@ -24,7 +24,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 # =================================================================
 # 1. CONFIGURAZIONE ASSOLUTA
 # =================================================================
-CHIAVE_GOOGLE = "AIzaSyAEn9vpmSXwFthCJFKk3842q_nGFp0ZKMY" # 👈 La tua API Key!
+# Prende la chiave dalla cassaforte segreta di Render
+CHIAVE_GOOGLE = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=CHIAVE_GOOGLE)
 
 URL_GESTIONALE = "https://www.studioodos.it/api_bandi_sync.php?token=ODOS_PYTHON_GEMINI_SYNC_2026"
