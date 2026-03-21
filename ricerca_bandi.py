@@ -185,6 +185,9 @@ def avvia_esplorazione_in_background():
 # =================================================================
 # 5. LE ROTTE FLASK (L'orecchio del Server)
 # =================================================================
+@app.route('/')
+def home():
+    return "Server Odós Attivo! Prova /avvia-radar"
 @app.route('/avvia-radar', methods=['POST', 'GET'])
 def api_avvia_radar():
     global RADAR_IN_ESECUZIONE
