@@ -151,7 +151,7 @@ def scansiona_sito_totale(driver, url_partenza):
                     if any(parola in href.lower() or parola in testo for parola in PAROLE_CHIAVE):
                         link_da_visitare.append(href)
         except Exception as e:
-            print(f"   ⚠️ Errore navigando su {url_corrente}")
+            print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {e}")
 
 # =================================================================
 # 4. IL "LAVORATORE IN BACKGROUND"
