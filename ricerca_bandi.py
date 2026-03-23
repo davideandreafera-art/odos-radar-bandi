@@ -170,7 +170,15 @@ def avvia_esplorazione_in_background():
         "https://bandifincalabra.it",
         "https://www.fincalabra.it/web/",
         "https://bandi.contributiregione.it/regione/calabria",
-        "https://www.reggiocal.it/Notizie/Details/7541"
+        "https://www.reggiocal.it/Notizie/Details/7541",
+        "https://european-union.europa.eu/live-work-study/funding-grants-subsidies_it",
+        "https://youreurope.europa.eu/business/finance-funding/getting-funding/access-finance/it",
+        "https://www.euipo.europa.eu/it/sme-corner/sme-fund",
+        "https://www.invitalia.it",
+        "https://commission.europa.eu/funding-tenders/how-apply/eligibility-who-can-get-funding/funding-opportunities-small-businesses_it",
+        "https://www.affarieuropei.gov.it/it/attivita/fondi-diretti-europei/come-accedere/",
+        "https://uibm.mise.gov.it/index.php/it/al-via-il-fondo-pmi-2025-di-euipo-per-gli-incentivi-europei-in-materia-di-proprieta-industriale",
+        "https://www.europainnovazione.com/bandi-europei/"
     ]
 
     try:
