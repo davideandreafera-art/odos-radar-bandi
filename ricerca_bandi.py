@@ -40,18 +40,34 @@ CORS(app) # Permette al tuo sito PHP di parlare con questo server
 RADAR_IN_ESECUZIONE = False
 
 # =================================================================
-# 2. MOTORE DEL BROWSER E LETTURA PDF (Rimasti identici)
+# 2. MOTORE DEL BROWSER E LETTURA PDF (Versione Ultra-Light)
 # =================================================================
 def configura_browser():
     chrome_options = Options()
-    chrome_options.add_argument("--headless") 
+    chrome_options.add_argument("--headless=new") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu") # Spegne la scheda video
+    chrome_options.add_argument("--disable-extensions") # Niente estensioni pesanti
+    chrome_options.add_argument("--incognito") # Niente salvataggio di cache
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false") # BLOCCO IMMAGINI (Essenziale!)
+    
+    # Preferenze avanzate: blocca immagini, CSS, e popup per caricare i siti in 1 millisecondo
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.managed_default_content_settings.stylesheets": 2,
+        "profile.managed_default_content_settings.popups": 2,
+        "profile.managed_default_content_settings.geolocation": 2
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    # Se un sito della regione è piantato, stacca la spina dopo 30 secondi invece di bloccarsi
+    driver.set_page_load_timeout(30)
     return driver
 
 def estrai_testo_da_pdf_online(url_pdf):
@@ -155,7 +171,7 @@ def scansiona_sito_totale(driver, url_partenza):
             print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {e}")
 
 # =================================================================
-# 4. IL "LAVORATORE IN BACKGROUND"
+# 4. IL "LAVORATORE IN BACKGROUND" (Anti-Crash)
 # =================================================================
 def avvia_esplorazione_in_background():
     global RADAR_IN_ESECUZIONE
@@ -182,16 +198,24 @@ def avvia_esplorazione_in_background():
     ]
 
     try:
-        driver = configura_browser()
+        # IL TRUCCO: Cicliamo sui siti e apriamo un browser NUOVO per ogni sito.
         for sito in SITI_BERSAGLIO:
             print(f"\n{'='*60}\n🌐 INIZIO SCANSIONE PROFONDA: {sito}\n{'='*60}")
-            scansiona_sito_totale(driver, sito)
-            print("✅ Sito completato.")
+            driver = None
+            try:
+                driver = configura_browser() # Si accende...
+                scansiona_sito_totale(driver, sito)
+                print("✅ Sito completato.")
+            except Exception as error_sito:
+                print(f"⚠️ Errore o timeout sul sito {sito}: {error_sito}")
+            finally:
+                if driver: 
+                    driver.quit() # ...e SI SPEGNE. Svuotando tutta la RAM prima del prossimo sito!
+                    print("🧹 Browser chiuso, RAM azzerata.")
+                    
     except Exception as e:
-        print(f"🆘 Errore Critico: {str(e)}")
+        print(f"🆘 Errore Critico Globale: {str(e)}")
     finally:
-        print("\nChiudo i motori del browser...")
-        if 'driver' in locals(): driver.quit()
         RADAR_IN_ESECUZIONE = False
         print("🏁 Scansione Totale Terminata. Pronto per il prossimo comando.")
 
