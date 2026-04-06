@@ -24,35 +24,40 @@ from webdriver_manager.chrome import ChromeDriverManager
 # =================================================================
 # 1. CONFIGURAZIONE ASSOLUTA
 # =================================================================
-# Prende la chiave dalla cassaforte segreta di Render
 CHIAVE_GOOGLE = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=CHIAVE_GOOGLE)
 
 URL_GESTIONALE = "https://www.studioodos.it/api_bandi_sync.php?token=ODOS_PYTHON_GEMINI_SYNC_2026"
 
-PAROLE_CHIAVE = ['bando', 'avvisi', 'avviso', 'agevolazione', 'finanziamento', 'contributo', 'voucher', 'pid']
+PAROLE_CHIAVE = ['bando', 'avvisi', 'avviso', 'agevolazione', 'finanziamento', 'contributo', 'voucher', 'pid', 'perduto']
 
-# Inizializziamo il Server Flask
 app = Flask(__name__)
-CORS(app) # Permette al tuo sito PHP di parlare con questo server
+CORS(app)
 
-# Variabile di sicurezza per evitare che si aprano 100 Chrome se si clicca 100 volte
 RADAR_IN_ESECUZIONE = False
 
 # =================================================================
-# 2. MOTORE DEL BROWSER E LETTURA PDF (Versione Ultra-Light)
+# 2. MOTORE DEL BROWSER E LETTURA PDF (Versione Ninja Anti-Blocco)
 # =================================================================
 def configura_browser():
     chrome_options = Options()
     chrome_options.add_argument("--headless=new") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu") # Spegne la scheda video
-    chrome_options.add_argument("--disable-extensions") # Niente estensioni pesanti
-    chrome_options.add_argument("--incognito") # Niente salvataggio di cache
-    chrome_options.add_argument("--blink-settings=imagesEnabled=false") # BLOCCO IMMAGINI (Essenziale!)
+    chrome_options.add_argument("--disable-gpu") 
+    chrome_options.add_argument("--incognito") 
+    chrome_options.add_argument("--blink-settings=imagesEnabled=false")
     
-    # Preferenze avanzate: blocca immagini, CSS, e popup per caricare i siti in 1 millisecondo
+    # --- 🛡️ INIZIO SCUDO ANTI-BOT (Le modifiche magiche) ---
+    # 1. Rimuove la scritta "Chrome è controllato da un software automatizzato"
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    
+    # 2. Carta d'identità perfetta di un utente Windows reale
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+    # --- 🛡️ FINE SCUDO ---
+
     prefs = {
         "profile.managed_default_content_settings.images": 2,
         "profile.managed_default_content_settings.stylesheets": 2,
@@ -60,21 +65,36 @@ def configura_browser():
         "profile.managed_default_content_settings.geolocation": 2
     }
     chrome_options.add_experimental_option("prefs", prefs)
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
-    # Se un sito della regione è piantato, stacca la spina dopo 30 secondi invece di bloccarsi
+    # Trucco extra per nascondere Selenium a livello Javascript
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            })
+        """
+    })
+    
     driver.set_page_load_timeout(30)
     return driver
 
 def estrai_testo_da_pdf_online(url_pdf):
     print(f"   📄 Estrazione da: {url_pdf[:70]}...")
     nome_file_temp = "temp_bando.pdf"
+    
+    # --- 🛡️ INTESTAZIONI ANTI-BLOCCO PER I PDF ---
+    headers_ninja = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Connection": "keep-alive"
+    }
+    
     try:
-        risposta = requests.get(url_pdf, headers={"User-Agent": "Mozilla/5.0"}, stream=True, timeout=15, verify=False)
+        risposta = requests.get(url_pdf, headers=headers_ninja, stream=True, timeout=15, verify=False)
         with open(nome_file_temp, 'wb') as f:
             f.write(risposta.content)
             
@@ -149,7 +169,7 @@ def scansiona_sito_totale(driver, url_partenza):
         
         try:
             driver.get(url_corrente)
-            time.sleep(3) 
+            time.sleep(4) # 👈 Leggermente aumentato per simulare lettura umana
             tutti_i_tag_a = driver.find_elements(By.TAG_NAME, "a")
             
             for tag in tutti_i_tag_a:
@@ -171,7 +191,7 @@ def scansiona_sito_totale(driver, url_partenza):
             print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {e}")
 
 # =================================================================
-# 4. IL "LAVORATORE IN BACKGROUND" (Anti-Crash)
+# 4. IL "LAVORATORE IN BACKGROUND"
 # =================================================================
 def avvia_esplorazione_in_background():
     global RADAR_IN_ESECUZIONE
@@ -198,19 +218,18 @@ def avvia_esplorazione_in_background():
     ]
 
     try:
-        # IL TRUCCO: Cicliamo sui siti e apriamo un browser NUOVO per ogni sito.
         for sito in SITI_BERSAGLIO:
             print(f"\n{'='*60}\n🌐 INIZIO SCANSIONE PROFONDA: {sito}\n{'='*60}")
             driver = None
             try:
-                driver = configura_browser() # Si accende...
+                driver = configura_browser() 
                 scansiona_sito_totale(driver, sito)
                 print("✅ Sito completato.")
             except Exception as error_sito:
                 print(f"⚠️ Errore o timeout sul sito {sito}: {error_sito}")
             finally:
                 if driver: 
-                    driver.quit() # ...e SI SPEGNE. Svuotando tutta la RAM prima del prossimo sito!
+                    driver.quit() 
                     print("🧹 Browser chiuso, RAM azzerata.")
                     
     except Exception as e:
@@ -220,30 +239,24 @@ def avvia_esplorazione_in_background():
         print("🏁 Scansione Totale Terminata. Pronto per il prossimo comando.")
 
 # =================================================================
-# 5. LE ROTTE FLASK (L'orecchio del Server)
+# 5. LE ROTTE FLASK
 # =================================================================
 @app.route('/')
 def home():
     return "Server Odós Attivo! Prova /avvia-radar"
+
 @app.route('/avvia-radar', methods=['POST', 'GET'])
 def api_avvia_radar():
     global RADAR_IN_ESECUZIONE
     
-    # Controllo di sicurezza: sta già girando?
     if RADAR_IN_ESECUZIONE:
         return jsonify({"status": "error", "message": "Il Radar sta già scansionando il web! Attendi."}), 429
     
-    # Crea un nuovo "Filo" (Thread) per far lavorare il robot in background
     thread = threading.Thread(target=avvia_esplorazione_in_background)
     thread.start()
     
-    # Risponde IMMEDIATAMENTE al tuo sito PHP, senza aspettare che finisca!
     return jsonify({"status": "success", "message": "Radar avviato correttamente in background!"}), 200
 
-# =================================================================
-# 🚀 AVVIO DEL SERVER
-# =================================================================
 if __name__ == "__main__":
     print("🟢 SERVER RADAR ODÓS ACCESO E IN ASCOLTO SULLA PORTA 5000...")
-    # Avvia il server web in locale sulla porta 5000
     app.run(host='0.0.0.0', port=5000)
