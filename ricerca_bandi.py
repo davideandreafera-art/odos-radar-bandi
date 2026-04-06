@@ -29,7 +29,21 @@ client = genai.Client(api_key=CHIAVE_GOOGLE)
 
 URL_GESTIONALE = "https://www.studioodos.it/api_bandi_sync.php?token=ODOS_PYTHON_GEMINI_SYNC_2026"
 
-PAROLE_CHIAVE = ['bando', 'avvisi', 'avviso', 'agevolazione', 'finanziamento', 'contributo', 'voucher', 'pid', 'perduto']
+PAROLE_CHIAVE = [
+    'bando', 'bandi', 
+    'avviso', 'avvisi', 
+    'agevolazione', 'agevolazioni', 
+    'finanziamento', 'finanziamenti', 
+    'contributo', 'contributi', 
+    'voucher', 'pid', 
+    'pnrr', 'fesr', 'por', 
+    'fondo perduto', 
+    'incentivo', 'incentivi', 
+    'sovvenzione', 'sovvenzioni', 
+    'bonus', 
+    'manifestazione di interesse', 
+    'sportello'
+]
 
 app = Flask(__name__)
 CORS(app)
@@ -78,7 +92,7 @@ def configura_browser():
         """
     })
     
-    driver.set_page_load_timeout(30)
+    driver.set_page_load_timeout(60)
     return driver
 
 def estrai_testo_da_pdf_online(url_pdf):
