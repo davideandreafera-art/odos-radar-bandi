@@ -153,13 +153,13 @@ def analizza_e_salva(testo_bando, link_fonte):
             break 
             
         except Exception as e:
-            if "429" in str(e):
-                print(f"   ⏳ Ops, Google in attesa (Tentativo {tentativo+1}/{massimo_tentativi}). Pausa 60s...")
+            errore = str(e)
+            if "429" in errore or "503" in errore or "UNAVAILABLE" in errore:
+                print(f"   ⏳ Server Google intasati (Tentativo {tentativo+1}/{massimo_tentativi}). Attendo 60s e riprovo...")
                 time.sleep(60)
             else:
-                print(f"   ⚠️ Errore lettura IA: {e}")
+                print(f"   ⚠️ Errore lettura IA non recuperabile: {errore}")
                 break
-
 # =================================================================
 # 3. LO SMART SPIDER
 # =================================================================
