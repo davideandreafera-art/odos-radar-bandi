@@ -169,7 +169,7 @@ def scansiona_sito_totale(driver, url_partenza):
     link_da_visitare = [url_partenza]
     pdf_trovati_e_analizzati = set()
     
-    LIMITE_PAGINE_WEB = 15
+    LIMITE_PAGINE_WEB = 10 # 👈 Limite abbassato per risparmiare RAM
     LIMITE_PDF_PER_SITO = 5
     pagine_scansionate = 0
     
@@ -183,7 +183,7 @@ def scansiona_sito_totale(driver, url_partenza):
         
         try:
             driver.get(url_corrente)
-            time.sleep(4) # 👈 Leggermente aumentato per simulare lettura umana
+            time.sleep(4) 
             tutti_i_tag_a = driver.find_elements(By.TAG_NAME, "a")
             
             for tag in tutti_i_tag_a:
@@ -202,7 +202,13 @@ def scansiona_sito_totale(driver, url_partenza):
                     if any(parola in href.lower() or parola in testo for parola in PAROLE_CHIAVE):
                         link_da_visitare.append(href)
         except Exception as e:
-            print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {e}")
+            errore = str(e)
+            print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {errore}")
+            
+            # 🛡️ AUTODIFESA RAM: Se Chrome muore, esce dal sito
+            if "localhost" in errore or "timed out" in errore.lower():
+                print("   🚨 Motore Chrome bloccato (RAM satura). Chiudo questo sito per autodifesa e passo al prossimo!")
+                break
 
 # =================================================================
 # 4. IL "LAVORATORE IN BACKGROUND"
