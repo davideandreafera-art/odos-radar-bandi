@@ -154,12 +154,12 @@ def analizza_e_salva(testo_bando, link_fonte):
             
         except Exception as e:
             errore = str(e)
-            if "429" in errore or "503" in errore or "UNAVAILABLE" in errore:
-                print(f"   ⏳ Server Google intasati (Tentativo {tentativo+1}/{massimo_tentativi}). Attendo 60s e riprovo...")
-                time.sleep(60)
-            else:
-                print(f"   ⚠️ Errore lettura IA non recuperabile: {errore}")
-                break
+            print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {errore}")
+            
+            # Se il browser interno (localhost) va in coma per mancanza di RAM, usciamo subito dal sito!
+            if "localhost" in errore or "timed out" in errore.lower():
+                print("   🚨 Motore Chrome bloccato (RAM satura). Chiudo questo sito per autodifesa e passo al prossimo!")
+                break # Rompe il ciclo e passa al sito successivo svuotando la memoria
 # =================================================================
 # 3. LO SMART SPIDER
 # =================================================================
