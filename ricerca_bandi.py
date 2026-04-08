@@ -14,11 +14,12 @@ from flask_cors import CORS
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# IMPORTIAMO SELENIUM, MA NON AVVIAMO IL BROWSER QUI
+# IMPORTIAMO SELENIUM E I SUOI STRUMENTI
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service # <-- Aggiunto per la tua funzione configura_browser
-from webdriver_manager.chrome import ChromeDriverManager # <-- Aggiunto per la tua funzione configura_browser
+from selenium.webdriver.chrome.service import Service 
+from webdriver_manager.chrome import ChromeDriverManager 
+from selenium.webdriver.common.by import By # 👈 ECCO LA RIGA DA AGGIUNGERE!
 
 # =================================================================
 # 1. CONFIGURAZIONE ASSOLUTA
