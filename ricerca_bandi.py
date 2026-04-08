@@ -18,8 +18,17 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+
+chrome_options = Options()
+chrome_options.add_argument("--headless=new") # Niente interfaccia grafica
+chrome_options.add_argument("--no-sandbox") # Vitale in Docker (evita crash permessi)
+chrome_options.add_argument("--disable-dev-shm-usage") # Evita crash per memoria insufficiente
+chrome_options.add_argument("--disable-gpu") 
+chrome_options.add_argument("--window-size=1920,1080") # A volte i siti caricano diversamente da mobile
+
+# Inizializzazione sicura con webdriver-manager
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
 
 # =================================================================
 # 1. CONFIGURAZIONE ASSOLUTA
