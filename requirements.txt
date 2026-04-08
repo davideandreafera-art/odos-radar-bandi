@@ -1,7 +1,7 @@
 Flask
 flask-cors
 requests
-PyPDF2
+pypdf
 google-genai
 selenium
 webdriver-manager
