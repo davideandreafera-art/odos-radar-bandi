@@ -4,29 +4,21 @@ import json
 import os
 import requests
 import urllib3
-from pypdf import PdfReader
-import threading # 👈 Il trucco per lavorare in background
+from pypdf import PdfReader # Assicurati di usare PyPDF2 se in basso chiami PyPDF2.PdfReader
+import threading 
 from urllib.parse import urljoin, urlparse
 from google import genai
 
-# Nuove librerie per creare il Server Web
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+# IMPORTIAMO SELENIUM, MA NON AVVIAMO IL BROWSER QUI
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-
-chrome_options = Options()
-chrome_options.add_argument("--headless=new") # Niente interfaccia grafica
-chrome_options.add_argument("--no-sandbox") # Vitale in Docker (evita crash permessi)
-chrome_options.add_argument("--disable-dev-shm-usage") # Evita crash per memoria insufficiente
-chrome_options.add_argument("--disable-gpu") 
-chrome_options.add_argument("--window-size=1920,1080") # A volte i siti caricano diversamente da mobile
-
-# Inizializzazione sicura con webdriver-manager
-driver = webdriver.Chrome(options=chrome_options)
+from selenium.webdriver.chrome.service import Service # <-- Aggiunto per la tua funzione configura_browser
+from webdriver_manager.chrome import ChromeDriverManager # <-- Aggiunto per la tua funzione configura_browser
 
 # =================================================================
 # 1. CONFIGURAZIONE ASSOLUTA
