@@ -25,5 +25,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia il codice
 COPY . .
 
-# Avvia con timeout esteso per scraping e lettura sicura del $PORT
-CMD sh -c "gunicorn --bind 0.0.0.0:$PORT --timeout 120 --workers 2 ricerca_bandi:app"
+# Avvia con timeout esteso e fallback sicuro sulla porta 10000
+CMD sh -c "gunicorn --bind 0.0.0.0:${PORT:-10000} --timeout 120 --workers 2 ricerca_bandi:app"
