@@ -23,4 +23,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Comando per avviare il server
-CMD gunicorn --bind 0.0.0.0:$PORT ricerca_bandi:app
+CMD sh -c "gunicorn --bind 0.0.0.0:$PORT --timeout 120 --workers 2 ricerca_bandi:app"
