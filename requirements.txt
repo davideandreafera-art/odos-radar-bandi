@@ -4,6 +4,5 @@ requests
 pypdf
 google-genai
 selenium
-webdriver-manager
 urllib3
 gunicorn
