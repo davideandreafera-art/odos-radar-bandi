@@ -40,7 +40,7 @@ PAROLE_CHIAVE = [
     'fondo perduto', 
     'incentivo', 'incentivi', 
     'sovvenzione', 'sovvenzioni', 
-    'bonus', 
+    'bonus','donna', 
     'manifestazione di interesse', 
     'sportello'
 ]
