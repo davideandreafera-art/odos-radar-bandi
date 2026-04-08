@@ -6,3 +6,4 @@ google-genai
 selenium
 urllib3
 gunicorn
+webdriver-manager
