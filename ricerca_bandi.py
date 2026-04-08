@@ -4,7 +4,7 @@ import json
 import os
 import requests
 import urllib3
-import PyPDF2
+from pypdf import PdfReader
 import threading # 👈 Il trucco per lavorare in background
 from urllib.parse import urljoin, urlparse
 from google import genai
