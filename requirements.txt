@@ -1,9 +1,10 @@
 Flask
 flask-cors
-requests
+gunicorn
+selenium
+webdriver-manager
 pypdf
 google-genai
-selenium
+requests
 urllib3
-gunicorn
 webdriver-manager
