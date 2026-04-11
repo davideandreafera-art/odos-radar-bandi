@@ -4,7 +4,7 @@ import json
 import os
 import requests
 import urllib3
-from pypdf import PdfReader # Assicurati di usare PyPDF2 se in basso chiami PyPDF2.PdfReader
+from pypdf import PdfReader
 import threading 
 from urllib.parse import urljoin, urlparse
 from google import genai
@@ -19,7 +19,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service 
 from webdriver_manager.chrome import ChromeDriverManager 
-from selenium.webdriver.common.by import By # 👈 ECCO LA RIGA DA AGGIUNGERE!
+from selenium.webdriver.common.by import By
 
 # =================================================================
 # 1. CONFIGURAZIONE ASSOLUTA
@@ -29,20 +29,13 @@ client = genai.Client(api_key=CHIAVE_GOOGLE)
 
 URL_GESTIONALE = "https://www.studioodos.it/api_bandi_sync.php?token=ODOS_PYTHON_GEMINI_SYNC_2026"
 
+# 🔥 PAROLE CHIAVE POTENZIATE (Filtro a Maglie Larghe per non perdere nulla)
 PAROLE_CHIAVE = [
-    'bando', 'bandi', 
-    'avviso', 'avvisi', 
-    'agevolazione', 'agevolazioni', 
-    'finanziamento', 'finanziamenti', 
-    'contributo', 'contributi', 
-    'voucher', 'pid', 
-    'pnrr', 'fesr', 'por', 
-    'fondo perduto', 
-    'incentivo', 'incentivi', 
-    'sovvenzione', 'sovvenzioni', 
-    'bonus','donna', 
-    'manifestazione di interesse', 
-    'sportello'
+    'bando', 'bandi', 'avviso', 'agevolazione', 'finanziamento', 'contributo', 
+    'voucher', 'pnrr', 'fesr', 'fondo perduto', 'incentivo', 'sovvenzione', 
+    'digitalizzazione', 'intelligenza artificiale', 'ia', 'ai', 'triage', 
+    'sanità', 'sanita', 'salute', 'telemedicina', 'innovazione', 'startup', 
+    'donne', 'imprenditoria', 'sportello'
 ]
 
 app = Flask(__name__)
@@ -51,7 +44,7 @@ CORS(app)
 RADAR_IN_ESECUZIONE = False
 
 # =================================================================
-# 2. MOTORE DEL BROWSER E LETTURA PDF (Versione Ninja Anti-Blocco)
+# 2. MOTORE DEL BROWSER E LETTURA (Versione Ninja Anti-Blocco)
 # =================================================================
 def configura_browser():
     chrome_options = Options()
@@ -62,20 +55,15 @@ def configura_browser():
     chrome_options.add_argument("--incognito") 
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")
     
-    # --- 🛡️ INIZIO SCUDO ANTI-BOT (Le modifiche magiche) ---
-    # 1. Rimuove la scritta "Chrome è controllato da un software automatizzato"
+    # 🛡️ SCUDO ANTI-BOT
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    # 2. Carta d'identità perfetta di un utente Windows reale
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-    # --- 🛡️ FINE SCUDO ---
 
     prefs = {
         "profile.managed_default_content_settings.images": 2,
         "profile.managed_default_content_settings.stylesheets": 2,
-        "profile.managed_default_content_settings.popups": 2,
         "profile.managed_default_content_settings.geolocation": 2
     }
     chrome_options.add_experimental_option("prefs", prefs)
@@ -83,39 +71,32 @@ def configura_browser():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
-    # Trucco extra per nascondere Selenium a livello Javascript
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": """
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            })
-        """
+        "source": "Object.defineProperty(navigator, 'webdriver', { get: () => undefined })"
     })
     
-    driver.set_page_load_timeout(60)
+    driver.set_page_load_timeout(45) # Abbassato a 45 per non restare bloccati su siti morti
     return driver
 
 def estrai_testo_da_pdf_online(url_pdf):
-    print(f"   📄 Estrazione da: {url_pdf[:70]}...")
+    print(f"   📄 Estrazione PDF da: {url_pdf[:70]}...")
     nome_file_temp = "temp_bando.pdf"
     
-    # --- 🛡️ INTESTAZIONI ANTI-BLOCCO PER I PDF ---
     headers_ninja = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-        "Connection": "keep-alive"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
     
     try:
         risposta = requests.get(url_pdf, headers=headers_ninja, stream=True, timeout=15, verify=False)
+        if risposta.status_code != 200: return ""
+        
         with open(nome_file_temp, 'wb') as f:
             f.write(risposta.content)
             
         testo = ""
         with open(nome_file_temp, 'rb') as f:
-            lettore = PyPDF2.PdfReader(f)
-            pagine = min(len(lettore.pages), 10) 
+            lettore = PdfReader(f)
+            pagine = min(len(lettore.pages), 12) # Aumentato leggermente per i decreti lunghi
             for i in range(pagine):
                 testo += lettore.pages[i].extract_text() + "\n"
         os.remove(nome_file_temp)
@@ -125,16 +106,32 @@ def estrai_testo_da_pdf_online(url_pdf):
         return ""
 
 def analizza_e_salva(testo_bando, link_fonte):
-    if not testo_bando.strip(): return
+    if not testo_bando or len(testo_bando.strip()) < 100: return
 
-    print("   🧠 Gemini sta analizzando i requisiti (attesa anti-blocco di 10s)...")
-    time.sleep(10)
+    print("   🧠 Gemini sta analizzando (anti-ban 8s)...")
+    time.sleep(8)
     
-    prompt = f"Analizza questo testo tecnico. Rispondi SOLO con un JSON valido. Chiavi: compatibile_ateco_869029 (bool), fondo_perduto (bool), percentuale_copertura (str), spese_ammissibili (str), scadenza (YYYY-MM-DD), titolo_bando (str). Testo: {testo_bando}"
+    # 🔥 PROMPT POTENZIATO: Istruiamo l'IA a cercare l'innovazione digitale!
+    prompt = f"""
+    Analizza questo bando pubblico o documento agevolativo.
+    Sei un europrogettista. Devi dirmi se questo bando finanzia (o è compatibile con) ALMENO UNO di questi settori:
+    1. Studi medici, ambulatori, professioni sanitarie (ATECO 86.90.29 / 86.22)
+    2. Digitalizzazione d'impresa, Intelligenza Artificiale, automazione segreteria
+    3. Innovazione dei processi (es. Sistemi di Triage automatizzati).
+    
+    Se è compatibile con ALMENO UNO dei punti sopra, imposta "compatibile_ateco_869029" a true.
+    Se finanzia a FONDO PERDUTO (anche in parte), imposta "fondo_perduto" a true.
+    
+    Rispondi SOLO con un JSON valido (senza markdown):
+    {{"compatibile_ateco_869029": bool, "fondo_perduto": bool, "percentuale_copertura": "es. 70%", "spese_ammissibili": "Riassunto max 20 parole", "scadenza": "YYYY-MM-DD oppure Non specificata", "titolo_bando": "Titolo ufficiale"}}
+    
+    Testo da analizzare: {testo_bando[:15000]} 
+    """
     
     massimo_tentativi = 3
     for tentativo in range(massimo_tentativi):
         try:
+            # Uso la v1beta e il modello flash per la massima velocità
             response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             json_text = response.text.strip().replace('```json', '').replace('```', '')
             dati_ai = json.loads(json_text)
@@ -143,25 +140,26 @@ def analizza_e_salva(testo_bando, link_fonte):
             
             if dati_ai.get('compatibile_ateco_869029') and dati_ai.get('fondo_perduto'):
                 dati_ai['link_bando'] = link_fonte 
-                dati_ai['ente_erogatore'] = "Rilevato dallo Smart Spider"
+                dati_ai['ente_erogatore'] = "Radar Odós"
                 dati_ai['titolo'] = titolo
                 
+                # Invia al server PHP
                 risposta_server = requests.post(URL_GESTIONALE, json=dati_ai, headers={"Content-Type": "application/json"})
-                print(f"   ✅ [BINGO!] TROVATO FONDO PERDUTO IN TARGET: {titolo}")
+                print(f"   ✅ [BINGO!] TROVATO: {titolo} | Server: {risposta_server.text}")
             else:
-                print(f"   ❌ Scartato (No requisiti): {titolo}")
+                print(f"   ❌ Scartato (No requisiti IA/Sanità/Fondo Perduto): {titolo[:50]}...")
             break 
             
         except Exception as e:
-            errore = str(e)
-            print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {errore}")
-            
-            # Se il browser interno (localhost) va in coma per mancanza di RAM, usciamo subito dal sito!
-            if "localhost" in errore or "timed out" in errore.lower():
-                print("   🚨 Motore Chrome bloccato (RAM satura). Chiudo questo sito per autodifesa e passo al prossimo!")
-                break # Rompe il ciclo e passa al sito successivo svuotando la memoria
+            if "503" in str(e): # Se Gemini è intasato, riprova
+                print("   ⏳ Gemini occupato (503), riprovo...")
+                time.sleep(5)
+                continue
+            print(f"   ⚠️ Errore Gemini/JSON: {str(e)[:100]}")
+            break
+
 # =================================================================
-# 3. LO SMART SPIDER
+# 3. LO SMART SPIDER (Doppia Estrazione: PDF + Testo Pagina)
 # =================================================================
 def scansiona_sito_totale(driver, url_partenza):
     dominio_base = urlparse(url_partenza).netloc
@@ -169,8 +167,8 @@ def scansiona_sito_totale(driver, url_partenza):
     link_da_visitare = [url_partenza]
     pdf_trovati_e_analizzati = set()
     
-    LIMITE_PAGINE_WEB = 10 # 👈 Limite abbassato per risparmiare RAM
-    LIMITE_PDF_PER_SITO = 5
+    LIMITE_PAGINE_WEB = 15 # Aumentato leggermente
+    LIMITE_PDF_PER_SITO = 3 # Abbassato per non impantanarsi su un solo sito
     pagine_scansionate = 0
     
     while link_da_visitare and pagine_scansionate < LIMITE_PAGINE_WEB:
@@ -183,35 +181,40 @@ def scansiona_sito_totale(driver, url_partenza):
         
         try:
             driver.get(url_corrente)
-            time.sleep(4) 
+            time.sleep(3) 
+            
+            # 🔥 NOVITA': Analizziamo anche il testo della pagina stessa (non solo i PDF!)
+            testo_pagina = driver.find_element(By.TAG_NAME, "body").text
+            if any(p in testo_pagina.lower() for p in ['fondo perduto', 'agevolazione', 'finanziamento']):
+                # Se la pagina web sembra un bando, la passiamo a Gemini!
+                analizza_e_salva(testo_pagina, url_corrente)
+
             tutti_i_tag_a = driver.find_elements(By.TAG_NAME, "a")
             
             for tag in tutti_i_tag_a:
                 href = tag.get_attribute('href')
-                testo = tag.text.lower()
                 if not href: continue
+                testo_link = tag.text.lower()
                 href = urljoin(url_corrente, href)
                 
                 if href.lower().endswith('.pdf'):
                     if href not in pdf_trovati_e_analizzati and len(pdf_trovati_e_analizzati) < LIMITE_PDF_PER_SITO:
                         pdf_trovati_e_analizzati.add(href)
                         testo_pdf = estrai_testo_da_pdf_online(href)
-                        analizza_e_salva(testo_pdf, url_corrente)
+                        analizza_e_salva(testo_pdf, href) # Passa il link diretto al PDF
                 
                 elif dominio_base in urlparse(href).netloc and href not in link_visitati and href not in link_da_visitare:
-                    if any(parola in href.lower() or parola in testo for parola in PAROLE_CHIAVE):
+                    if any(parola in href.lower() or parola in testo_link for parola in PAROLE_CHIAVE):
                         link_da_visitare.append(href)
+                        
         except Exception as e:
-            errore = str(e)
-            print(f"   ⚠️ Errore navigando su {url_corrente} | DETTAGLIO: {errore}")
-            
-            # 🛡️ AUTODIFESA RAM: Se Chrome muore, esce dal sito
-            if "localhost" in errore or "timed out" in errore.lower():
-                print("   🚨 Motore Chrome bloccato (RAM satura). Chiudo questo sito per autodifesa e passo al prossimo!")
+            errore = str(e).lower()
+            if "localhost" in errore or "timed out" in errore or "memory" in errore:
+                print("   🚨 Chrome in Sofferenza RAM. Fuga tattica dal sito!")
                 break
 
 # =================================================================
-# 4. IL "LAVORATORE IN BACKGROUND"
+# 4. IL "LAVORATORE IN BACKGROUND" (Nuovi Siti Target)
 # =================================================================
 def avvia_esplorazione_in_background():
     global RADAR_IN_ESECUZIONE
@@ -221,20 +224,13 @@ def avvia_esplorazione_in_background():
     
     SITI_BERSAGLIO = [
         "https://calabriaeuropa.regione.calabria.it/bando/",
+        "https://www.fincalabra.it/web/bandi-e-avvisi", # Link più preciso
+        "https://www.invitalia.it/cosa-facciamo/creiamo-nuove-aziende", # Area esatta startup/imprese
+        "https://www.mimit.gov.it/it/incentivi", # Ex MISE (Fondamentale per voucher digitalizzazione)
+        "https://www.agenas.gov.it/pnrr", # Agenzia Nazionale Sanità (Missione 6)
         "https://www.puntoimpresadigitale.camcom.it/bandi/",
-        "https://www.rc.camcom.gov.it/bandi-e-concorsi/bandi-di-gara",
         "https://bandifincalabra.it",
-        "https://www.fincalabra.it/web/",
-        "https://bandi.contributiregione.it/regione/calabria",
-        "https://www.reggiocal.it/Notizie/Details/7541",
-        "https://european-union.europa.eu/live-work-study/funding-grants-subsidies_it",
-        "https://youreurope.europa.eu/business/finance-funding/getting-funding/access-finance/it",
-        "https://www.euipo.europa.eu/it/sme-corner/sme-fund",
-        "https://www.invitalia.it",
-        "https://commission.europa.eu/funding-tenders/how-apply/eligibility-who-can-get-funding/funding-opportunities-small-businesses_it",
-        "https://www.affarieuropei.gov.it/it/attivita/fondi-diretti-europei/come-accedere/",
-        "https://uibm.mise.gov.it/index.php/it/al-via-il-fondo-pmi-2025-di-euipo-per-gli-incentivi-europei-in-materia-di-proprieta-industriale",
-        "https://www.europainnovazione.com/bandi-europei/"
+        "https://www.rc.camcom.gov.it/bandi-e-concorsi/bandi-di-gara"
     ]
 
     try:
@@ -244,7 +240,6 @@ def avvia_esplorazione_in_background():
             try:
                 driver = configura_browser() 
                 scansiona_sito_totale(driver, sito)
-                print("✅ Sito completato.")
             except Exception as error_sito:
                 print(f"⚠️ Errore o timeout sul sito {sito}: {error_sito}")
             finally:
@@ -263,7 +258,7 @@ def avvia_esplorazione_in_background():
 # =================================================================
 @app.route('/')
 def home():
-    return "Server Odós Attivo! Prova /avvia-radar"
+    return "Server Odós Attivo! Prova a lanciare il radar dalla tua Dashboard."
 
 @app.route('/avvia-radar', methods=['POST', 'GET'])
 def api_avvia_radar():
@@ -278,5 +273,6 @@ def api_avvia_radar():
     return jsonify({"status": "success", "message": "Radar avviato correttamente in background!"}), 200
 
 if __name__ == "__main__":
-    print("🟢 SERVER RADAR ODÓS ACCESO E IN ASCOLTO SULLA PORTA 5000...")
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 10000))
+    print(f"🟢 SERVER RADAR ODÓS ACCESO SULLA PORTA {port}...")
+    app.run(host='0.0.0.0', port=port)
