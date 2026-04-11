@@ -143,9 +143,22 @@ def analizza_e_salva(testo_bando, link_fonte):
                 dati_ai['ente_erogatore'] = "Radar Odós"
                 dati_ai['titolo'] = titolo
                 
-                # Invia al server PHP
-                risposta_server = requests.post(URL_GESTIONALE, json=dati_ai, headers={"Content-Type": "application/json"})
-                print(f"   ✅ [BINGO!] TROVATO: {titolo} | Server: {risposta_server.text}")
+                # --- 🛡️ PASSAPORTO DIPLOMATICO PER IL SERVER PHP ---
+                headers_ninja_post = {
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                    "Accept": "application/json, text/plain, */*",
+                    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Origin": "https://www.studioodos.it", # Finge di provenire dal tuo stesso sito
+                    "Referer": "https://www.studioodos.it/bandi.php",
+                    "Connection": "keep-alive"
+                }
+                
+                # Invia al server PHP mascherato da utente umano
+                risposta_server = requests.post(URL_GESTIONALE, json=dati_ai, headers=headers_ninja_post, verify=False, timeout=10)
+                
+                print(f"   ✅ [BINGO!] TROVATO E TRASMESSO: {titolo}")
+                print(f"   📡 Risposta Server Odós: {risposta_server.text}")
             else:
                 print(f"   ❌ Scartato (No requisiti IA/Sanità/Fondo Perduto): {titolo[:50]}...")
             break 
