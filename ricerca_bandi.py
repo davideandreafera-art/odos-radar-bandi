@@ -49,6 +49,10 @@ RADAR_IN_ESECUZIONE = False
 # =================================================================
 def configura_browser():
     chrome_options = Options()
+    
+    # 🔥 LA MAGIA: Ferma il caricamento della pagina appena c'è il testo, ignorando la grafica pesante!
+    chrome_options.page_load_strategy = 'eager' 
+    
     chrome_options.add_argument("--headless=new") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -56,19 +60,20 @@ def configura_browser():
     chrome_options.add_argument("--incognito") 
     chrome_options.add_argument("--blink-settings=imagesEnabled=false")
     
-    # 🛡️ SCUDO ANTI-BOT
+    # Disabilitiamo anche Javascript per risparmiare ancora più RAM (I siti della regione non ne hanno bisogno per i link)
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,
+        "profile.managed_default_content_settings.stylesheets": 2,
+        "profile.managed_default_content_settings.geolocation": 2,
+        "profile.managed_default_content_settings.javascript": 2 # <-- Nuovo blocco anti-pesantezza
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
+    
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
     chrome_options.add_experimental_option('useAutomationExtension', False)
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
 
-    prefs = {
-        "profile.managed_default_content_settings.images": 2,
-        "profile.managed_default_content_settings.stylesheets": 2,
-        "profile.managed_default_content_settings.geolocation": 2
-    }
-    chrome_options.add_experimental_option("prefs", prefs)
-    
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
@@ -76,9 +81,9 @@ def configura_browser():
         "source": "Object.defineProperty(navigator, 'webdriver', { get: () => undefined })"
     })
     
-    driver.set_page_load_timeout(45)
+    # Abbassiamo il timeout a 20 secondi: se una pagina è bloccata, la saltiamo!
+    driver.set_page_load_timeout(20) 
     return driver
-
 def estrai_testo_da_pdf_online(url_pdf):
     print(f"   📄 Estrazione PDF da: {url_pdf[:70]}...")
     nome_file_temp = "temp_bando.pdf"
@@ -185,8 +190,8 @@ def scansiona_sito_totale(driver, url_partenza):
     link_da_visitare = [url_partenza]
     pdf_trovati_e_analizzati = set()
     
-    LIMITE_PAGINE_WEB = 15 
-    LIMITE_PDF_PER_SITO = 3 
+    LIMITE_PAGINE_WEB = 5 
+    LIMITE_PDF_PER_SITO = 2 
     pagine_scansionate = 0
     
     while link_da_visitare and pagine_scansionate < LIMITE_PAGINE_WEB:
