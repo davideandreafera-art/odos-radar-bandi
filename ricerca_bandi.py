@@ -4,7 +4,8 @@ import json
 import os
 import requests
 import urllib3
-from pypdf import PdfReader
+import gc # 🧹 Il nostro Netturbino della RAM
+from pypdf import PdfReader 
 import threading 
 from urllib.parse import urljoin, urlparse
 from google import genai
@@ -29,7 +30,7 @@ client = genai.Client(api_key=CHIAVE_GOOGLE)
 
 URL_GESTIONALE = "https://www.studioodos.it/api_bandi_sync.php?token=ODOS_PYTHON_GEMINI_SYNC_2026"
 
-# 🔥 PAROLE CHIAVE POTENZIATE (Filtro a Maglie Larghe per non perdere nulla)
+# 🔥 PAROLE CHIAVE POTENZIATE 
 PAROLE_CHIAVE = [
     'bando', 'bandi', 'avviso', 'agevolazione', 'finanziamento', 'contributo', 
     'voucher', 'pnrr', 'fesr', 'fondo perduto', 'incentivo', 'sovvenzione', 
@@ -44,7 +45,7 @@ CORS(app)
 RADAR_IN_ESECUZIONE = False
 
 # =================================================================
-# 2. MOTORE DEL BROWSER E LETTURA (Versione Ninja Anti-Blocco)
+# 2. MOTORE DEL BROWSER E LETTURA (Blindato contro OOM Crash)
 # =================================================================
 def configura_browser():
     chrome_options = Options()
@@ -75,7 +76,7 @@ def configura_browser():
         "source": "Object.defineProperty(navigator, 'webdriver', { get: () => undefined })"
     })
     
-    driver.set_page_load_timeout(45) # Abbassato a 45 per non restare bloccati su siti morti
+    driver.set_page_load_timeout(45)
     return driver
 
 def estrai_testo_da_pdf_online(url_pdf):
@@ -87,6 +88,7 @@ def estrai_testo_da_pdf_online(url_pdf):
     }
     
     try:
+        # Timeout rigido: se in 15 secondi non scarica il PDF regionale, scappiamo per salvare il server
         risposta = requests.get(url_pdf, headers=headers_ninja, stream=True, timeout=15, verify=False)
         if risposta.status_code != 200: return ""
         
@@ -96,9 +98,11 @@ def estrai_testo_da_pdf_online(url_pdf):
         testo = ""
         with open(nome_file_temp, 'rb') as f:
             lettore = PdfReader(f)
-            pagine = min(len(lettore.pages), 12) # Aumentato leggermente per i decreti lunghi
+            # 💡 SALVAVITA RAM: Legge solo le prime 5 pagine per evitare crash (i dati chiave sono lì)
+            pagine = min(len(lettore.pages), 5) 
             for i in range(pagine):
                 testo += lettore.pages[i].extract_text() + "\n"
+        
         os.remove(nome_file_temp)
         return testo
     except Exception as e:
@@ -111,7 +115,6 @@ def analizza_e_salva(testo_bando, link_fonte):
     print("   🧠 Gemini sta analizzando (anti-ban 8s)...")
     time.sleep(8)
     
-    # 🔥 PROMPT POTENZIATO: Istruiamo l'IA a cercare l'innovazione digitale!
     prompt = f"""
     Analizza questo bando pubblico o documento agevolativo.
     Sei un europrogettista. Devi dirmi se questo bando finanzia (o è compatibile con) ALMENO UNO di questi settori:
@@ -131,7 +134,6 @@ def analizza_e_salva(testo_bando, link_fonte):
     massimo_tentativi = 3
     for tentativo in range(massimo_tentativi):
         try:
-            # Uso la v1beta e il modello flash per la massima velocità
             response = client.models.generate_content(model='gemini-2.5-flash', contents=prompt)
             json_text = response.text.strip().replace('```json', '').replace('```', '')
             dati_ai = json.loads(json_text)
@@ -143,18 +145,17 @@ def analizza_e_salva(testo_bando, link_fonte):
                 dati_ai['ente_erogatore'] = "Radar Odós"
                 dati_ai['titolo'] = titolo
                 
-                # --- 🛡️ PASSAPORTO DIPLOMATICO PER IL SERVER PHP ---
+                # --- 🛡️ PASSAPORTO DIPLOMATICO PER IL SERVER PHP (Anti-Firewall) ---
                 headers_ninja_post = {
                     "Content-Type": "application/json",
                     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
                     "Accept": "application/json, text/plain, */*",
                     "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "Origin": "https://www.studioodos.it", # Finge di provenire dal tuo stesso sito
+                    "Origin": "https://www.studioodos.it",
                     "Referer": "https://www.studioodos.it/bandi.php",
                     "Connection": "keep-alive"
                 }
                 
-                # Invia al server PHP mascherato da utente umano
                 risposta_server = requests.post(URL_GESTIONALE, json=dati_ai, headers=headers_ninja_post, verify=False, timeout=10)
                 
                 print(f"   ✅ [BINGO!] TROVATO E TRASMESSO: {titolo}")
@@ -164,15 +165,19 @@ def analizza_e_salva(testo_bando, link_fonte):
             break 
             
         except Exception as e:
-            if "503" in str(e): # Se Gemini è intasato, riprova
+            if "503" in str(e): 
                 print("   ⏳ Gemini occupato (503), riprovo...")
                 time.sleep(5)
                 continue
             print(f"   ⚠️ Errore Gemini/JSON: {str(e)[:100]}")
             break
 
+    # 🧹 PULIZIA RAM POST-ANALISI
+    del testo_bando
+    gc.collect()
+
 # =================================================================
-# 3. LO SMART SPIDER (Doppia Estrazione: PDF + Testo Pagina)
+# 3. LO SMART SPIDER
 # =================================================================
 def scansiona_sito_totale(driver, url_partenza):
     dominio_base = urlparse(url_partenza).netloc
@@ -180,8 +185,8 @@ def scansiona_sito_totale(driver, url_partenza):
     link_da_visitare = [url_partenza]
     pdf_trovati_e_analizzati = set()
     
-    LIMITE_PAGINE_WEB = 15 # Aumentato leggermente
-    LIMITE_PDF_PER_SITO = 3 # Abbassato per non impantanarsi su un solo sito
+    LIMITE_PAGINE_WEB = 15 
+    LIMITE_PDF_PER_SITO = 3 
     pagine_scansionate = 0
     
     while link_da_visitare and pagine_scansionate < LIMITE_PAGINE_WEB:
@@ -196,10 +201,9 @@ def scansiona_sito_totale(driver, url_partenza):
             driver.get(url_corrente)
             time.sleep(3) 
             
-            # 🔥 NOVITA': Analizziamo anche il testo della pagina stessa (non solo i PDF!)
+            # Analisi anche del testo HTML (decreti online)
             testo_pagina = driver.find_element(By.TAG_NAME, "body").text
             if any(p in testo_pagina.lower() for p in ['fondo perduto', 'agevolazione', 'finanziamento']):
-                # Se la pagina web sembra un bando, la passiamo a Gemini!
                 analizza_e_salva(testo_pagina, url_corrente)
 
             tutti_i_tag_a = driver.find_elements(By.TAG_NAME, "a")
@@ -214,7 +218,7 @@ def scansiona_sito_totale(driver, url_partenza):
                     if href not in pdf_trovati_e_analizzati and len(pdf_trovati_e_analizzati) < LIMITE_PDF_PER_SITO:
                         pdf_trovati_e_analizzati.add(href)
                         testo_pdf = estrai_testo_da_pdf_online(href)
-                        analizza_e_salva(testo_pdf, href) # Passa il link diretto al PDF
+                        analizza_e_salva(testo_pdf, href) 
                 
                 elif dominio_base in urlparse(href).netloc and href not in link_visitati and href not in link_da_visitare:
                     if any(parola in href.lower() or parola in testo_link for parola in PAROLE_CHIAVE):
@@ -227,7 +231,7 @@ def scansiona_sito_totale(driver, url_partenza):
                 break
 
 # =================================================================
-# 4. IL "LAVORATORE IN BACKGROUND" (Nuovi Siti Target)
+# 4. IL "LAVORATORE IN BACKGROUND"
 # =================================================================
 def avvia_esplorazione_in_background():
     global RADAR_IN_ESECUZIONE
@@ -237,10 +241,10 @@ def avvia_esplorazione_in_background():
     
     SITI_BERSAGLIO = [
         "https://calabriaeuropa.regione.calabria.it/bando/",
-        "https://www.fincalabra.it/web/bandi-e-avvisi", # Link più preciso
-        "https://www.invitalia.it/cosa-facciamo/creiamo-nuove-aziende", # Area esatta startup/imprese
-        "https://www.mimit.gov.it/it/incentivi", # Ex MISE (Fondamentale per voucher digitalizzazione)
-        "https://www.agenas.gov.it/pnrr", # Agenzia Nazionale Sanità (Missione 6)
+        "https://www.fincalabra.it/web/bandi-e-avvisi",
+        "https://www.invitalia.it/cosa-facciamo/creiamo-nuove-aziende",
+        "https://www.mimit.gov.it/it/incentivi",
+        "https://www.agenas.gov.it/pnrr",
         "https://www.puntoimpresadigitale.camcom.it/bandi/",
         "https://bandifincalabra.it",
         "https://www.rc.camcom.gov.it/bandi-e-concorsi/bandi-di-gara"
@@ -258,7 +262,9 @@ def avvia_esplorazione_in_background():
             finally:
                 if driver: 
                     driver.quit() 
-                    print("🧹 Browser chiuso, RAM azzerata.")
+                    print("🧹 Browser chiuso, RAM azzerata per questo sito.")
+                # 🧹 PULIZIA RAM TOTALE FRA UN SITO E L'ALTRO
+                gc.collect()
                     
     except Exception as e:
         print(f"🆘 Errore Critico Globale: {str(e)}")
