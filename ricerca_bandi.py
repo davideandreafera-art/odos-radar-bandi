@@ -30,13 +30,14 @@ client = genai.Client(api_key=CHIAVE_GOOGLE)
 
 URL_GESTIONALE = "https://www.studioodos.it/api_bandi_sync.php?token=ODOS_PYTHON_GEMINI_SYNC_2026"
 
-# 🔥 PAROLE CHIAVE POTENZIATE 
+# 🔥 PAROLE CHIAVE POTENZIATE (Espansione per PMI, Professionisti e Digital Europe)
 PAROLE_CHIAVE = [
     'bando', 'bandi', 'avviso', 'agevolazione', 'finanziamento', 'contributo', 
     'voucher', 'pnrr', 'fesr', 'fondo perduto', 'incentivo', 'sovvenzione', 
-    'digitalizzazione', 'intelligenza artificiale', 'ia', 'ai', 'triage', 
-    'sanità', 'sanita', 'salute', 'telemedicina', 'innovazione', 'startup', 
-    'donne', 'imprenditoria', 'sportello'
+    'digitalizzazione', 'intelligenza artificiale', 'ia', 'ai', 'triage', 'ict',
+    'sanità', 'sanita', 'salute', 'medicina', 'telemedicina', 'innovazione tecnologica', 
+    'startup', 'donne', 'imprenditoria', 'sportello', 'terzo settore', 
+    'liberi professionisti', 'micro-imprese', 'pmi', 'bandi europei', 'digital europe'
 ]
 
 app = Flask(__name__)
@@ -121,17 +122,18 @@ def analizza_e_salva(testo_bando, link_fonte):
     time.sleep(8)
     
     prompt = f"""
-    Analizza questo bando pubblico o documento agevolativo.
-    Sei un europrogettista. Devi dirmi se questo bando finanzia (o è compatibile con) ALMENO UNO di questi settori:
-    1. Studi medici, ambulatori, professioni sanitarie (ATECO 86.90.29 / 86.22)
-    2. Digitalizzazione d'impresa, Intelligenza Artificiale, automazione segreteria
-    3. Innovazione dei processi (es. Sistemi di Triage automatizzati).
+    Analizza questo bando pubblico, decreto o documento agevolativo.
+    Sei un europrogettista esperto. Devi dirmi se questo bando finanzia (o è compatibile con) ALMENO UNO di questi settori/soggetti:
+    1. Studi medici, ambulatori, sanità, salute (ATECO 86.90.29 / 86.22)
+    2. Liberi professionisti, Micro-imprese o PMI in generale (perché lo Studio Odós rientra in queste categorie)
+    3. Digitalizzazione d'impresa, ICT, Intelligenza Artificiale, automazione segreteria
+    4. Innovazione dei processi (es. Sistemi di Triage automatizzati).
     
     Se è compatibile con ALMENO UNO dei punti sopra, imposta "compatibile_ateco_869029" a true.
-    Se finanzia a FONDO PERDUTO (anche in parte), imposta "fondo_perduto" a true.
+    Se finanzia a FONDO PERDUTO o tramite VOUCHER (anche in parte), imposta "fondo_perduto" a true.
     
     Rispondi SOLO con un JSON valido (senza markdown):
-    {{"compatibile_ateco_869029": bool, "fondo_perduto": bool, "percentuale_copertura": "es. 70%", "spese_ammissibili": "Riassunto max 20 parole", "scadenza": "YYYY-MM-DD oppure Non specificata", "titolo_bando": "Titolo ufficiale"}}
+    {{"compatibile_ateco_869029": bool, "fondo_perduto": bool, "percentuale_copertura": "es. 70%", "spese_ammissibili": "Riassunto max 20 parole", "scadenza": "YYYY-MM-DD oppure A Sportello", "titolo_bando": "Titolo ufficiale"}}
     
     Testo da analizzare: {testo_bando[:15000]} 
     """
@@ -245,6 +247,7 @@ def avvia_esplorazione_in_background():
     print("\n🚀 [THREAD BACKGROUND] Odós Smart Spider Partito!")
     
     SITI_BERSAGLIO = [
+        "https://www.obiettivoeuropa.com", # 👈 IL NUOVO OBIETTIVO AGGIUNTO!
         "https://calabriaeuropa.regione.calabria.it/bando/",
         "https://www.fincalabra.it/web/bandi-e-avvisi",
         "https://www.invitalia.it/cosa-facciamo/creiamo-nuove-aziende",
